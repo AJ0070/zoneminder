@@ -464,8 +464,12 @@ int main(int argc, char *argv[]) {
     {
       // Sleep until the next periodic pass, or earlier if a HELLO arrives
       // that needs a session (re)build
+      // The signal handler cannot notify the cv, so wait in short slices and
+      // watch zm_terminate
       std::unique_lock<std::mutex> lock(rebuild_mutex);
-      rebuild_cv.wait_for(lock, std::chrono::seconds(10), [] { return rebuild_pending; });
+      const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+      while (!rebuild_pending and !zm_terminate and std::chrono::steady_clock::now() < deadline)
+        rebuild_cv.wait_for(lock, std::chrono::milliseconds(200));
       rebuild_pending = false;
     }
 
