@@ -76,34 +76,37 @@ void Authenticator::authHandleHeader(const std::string &headerData) {
       }
     }
     subparts.push_back(current);
-    // subparts are key="value"
+    // subparts are key="value". Split at the first '=' only, because the value
+    // may itself contain '=' (base64 nonces commonly end in '=' or '=='), and
+    // splitting on every '=' would truncate such a value.
     for ( size_t i = 0; i < subparts.size(); i++ ) {
-      StringVector kvPair = Split(TrimSpaces(subparts[i]), "=");
-      // A directive with no '=' (or an empty one) yields fewer than two parts, so
-      // reading kvPair[0]/kvPair[1] below would run off the end. The header comes
-      // from a camera's 401 response, which on an HTTP source is unauthenticated,
-      // so a malformed directive would otherwise crash the capture daemon
+      const std::string subpart = TrimSpaces(subparts[i]);
+      const size_t equals = subpart.find('=');
+      // A directive with no '=' is not key=value. The header comes from a
+      // camera's 401 response, which on an HTTP source is unauthenticated, so a
+      // malformed directive must be ignored rather than acted on
       // (refs GHSA-r8cq-jgx6-gr5p). Skip anything that is not key=value.
-      if ( kvPair.size() < 2 ) continue;
-      std::string key = TrimSpaces(kvPair[0]);
+      if ( equals == std::string::npos ) continue;
+      std::string key = TrimSpaces(subpart.substr(0, equals));
+      std::string value = TrimSpaces(subpart.substr(equals + 1));
       if ( key == "realm" ) {
-        fRealm = Trim(kvPair[1], "\"");
+        fRealm = Trim(value, "\"");
         continue;
       }
       if ( key == "nonce" ) {
-        fNonce = Trim(kvPair[1], "\"");
+        fNonce = Trim(value, "\"");
         continue;
       }
       if ( key == "qop" ) {
         // qop may be a list such as "auth,auth-int"; only auth is supported.
         fQop = "";
-        for ( const std::string &option : Split(Trim(kvPair[1], "\""), ",") ) {
+        for ( const std::string &option : Split(Trim(value, "\""), ",") ) {
           if ( TrimSpaces(option) == "auth" ) fQop = "auth";
         }
         continue;
       }
       if ( key == "opaque" ) {
-        fOpaque = Trim(kvPair[1], "\"");
+        fOpaque = Trim(value, "\"");
         continue;
       }
     }

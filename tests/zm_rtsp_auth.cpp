@@ -35,6 +35,18 @@ TEST_CASE("Authenticator Digest parsing keeps commas inside quoted values", "[rt
   CHECK(header.find("opaque=\"a,b\"") != std::string::npos);
 }
 
+TEST_CASE("Authenticator Digest keeps '=' inside quoted values", "[rtsp_auth]") {
+  zm::Authenticator auth("user1", "pass1");
+  auth.authHandleHeader(
+      "Digest realm=\"Cam\", nonce=\"YWJjZGVm==\", qop=\"auth\", opaque=\"b3BhcXVl=\"");
+
+  REQUIRE(auth.nonce() == "YWJjZGVm==");
+
+  std::string header = auth.getAuthHeader("DESCRIBE", "rtsp://cam/live");
+  CHECK(header.find("nonce=\"YWJjZGVm==\"") != std::string::npos);
+  CHECK(header.find("opaque=\"b3BhcXVl=\"") != std::string::npos);
+}
+
 TEST_CASE("Authenticator Digest selects auth from a qop list", "[rtsp_auth]") {
   zm::Authenticator auth("user1", "pass1");
   auth.authHandleHeader("Digest realm=\"Cam\", nonce=\"n1\", qop=\"auth,auth-int\"");
