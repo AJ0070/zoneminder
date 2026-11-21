@@ -2114,8 +2114,9 @@ function initPage() {
 } // end initPage
 
 function addOrCreateTag(tagValue, buttonPressed = null) {
-  const tagNames = availableTags.map((t) => t.Name.toLowerCase());
-  const index = tagNames.indexOf(tagValue.toLowerCase());
+  // Tag names are case sensitive ("Car" and "car" can both exist), so an exact match wins over a case-insensitive one.
+  let index = availableTags.findIndex((t) => t.Name === tagValue);
+  if (index < 0) index = availableTags.findIndex((t) => t.Name.toLowerCase() === tagValue.toLowerCase());
   if (index > -1) {
     addTag(availableTags[index], buttonPressed);
     $j('.tag-dropdown-content').hide();
