@@ -20,7 +20,9 @@ function getControlResponse(respObj, respText) {
 // the button's value is the command, releasing a continuous move stops it.
 function controlCmd(event) {
   const button = event.currentTarget || event.target;
-  const control = (event.type == 'mouseup') ? 'moveStop' : button.getAttribute('value');
+  // A released continuous zoom/focus/iris button stops its own axis.
+  const lens = /^(zoom|focus|iris)Con/.exec(button.getAttribute('value'));
+  const control = (event.type == 'mouseup') ? (lens ? lens[1] + 'Stop' : 'moveStop') : button.getAttribute('value');
   const xtell = button.getAttribute('data-xtell');
   const ytell = button.getAttribute('data-ytell');
   const data = {};
