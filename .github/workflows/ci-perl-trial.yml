@@ -1,0 +1,35 @@
+name: Perl tests trial
+
+on:
+  push:
+    branches: [ perl-ci-trial ]
+
+permissions:
+  contents: read
+
+jobs:
+  perl-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install Perl modules
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdbi-perl libdbd-mysql-perl libjson-maybexs-perl \
+            libnumber-bytes-human-perl libdatetime-perl libdata-uuid-perl libsys-mmap-perl \
+            libwww-perl libcrypt-eksblowfish-perl libdata-entropy-perl libclass-std-fast-perl \
+            libsoap-wsdl-perl libio-socket-multicast-perl libdigest-sha-perl libtest-simple-perl \
+            libdevice-serialport-perl libimage-info-perl libmime-lite-perl libmime-tools-perl \
+            libnet-sftp-foreign-perl libexpect-perl libfile-slurp-perl libjson-perl libtime-hires-perl \
+            libio-socket-ssl-perl liburi-perl libhttp-message-perl libcrypt-cbc-perl
+      - name: Run every Perl test and classify
+        run: |
+          pass=0; fail=0
+          for t in tests/perl/*.pl scripts/ZoneMinder/t/*.t; do
+            out=$(timeout 60 perl -Iscripts/ZoneMinder/lib "$t" 2>&1); rc=$?
+            if [ $rc -eq 0 ]; then pass=$((pass+1)); continue; fi
+            fail=$((fail+1))
+            m=$(echo "$out" | grep -oE "Can't locate [A-Za-z0-9/_]+\.pm" | head -1)
+            echo "FAILED rc=$rc $t :: ${m:-$(echo "$out" | grep -m1 -E 'FAIL|not ok|died|rror' | cut -c1-160)}"
+          done
+          echo "pass=$pass fail=$fail"
